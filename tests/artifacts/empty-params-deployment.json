@@ -1,0 +1,5 @@
+{
+  "parameters": {},
+  "stack-name": "empty-params-stack",
+  "template-path": "./templates/simple.yaml"
+}

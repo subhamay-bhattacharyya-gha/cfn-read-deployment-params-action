@@ -1,44 +1,86 @@
-name: 'Action Name'
-description: 'Action Description'
+name: 'CloudFormation Parameters Reader'
+description: 'Reads CloudFormation deployment parameters from JSON artifact'
 
 inputs:
-  input-1:
-    description: Input description.
+  artifact-path:
+    description: 'Path to the deployment.json artifact'
     required: false
-    default: default-value
-  input-2:
-    description: Input description.
-    required: false
-    default: default-value
-  input-3:
-    description: Input description.
-    required: false
-    default: default-value
-  github-token:
-    description: 'GitHub token'
-    required: true
+    default: './artifacts/deployment.json'
+
+outputs:
+  parameters:
+    description: 'CloudFormation parameters in JSON format'
+  stack-name:
+    description: 'CloudFormation stack name'
+  template-path:
+    description: 'Path to CloudFormation template'
 
 runs:
   using: 'composite'
   steps:
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: 3.x
-
-    - name: Sample step to call GitHub API
+    - name: Read CloudFormation Parameters
       shell: bash
-      env:
-        GITHUB_TOKEN: ${{ inputs.github-token }}
       run: |
-        ISSUE_NUMBER="${{ github.event.issue.number }}"
-        REPO="${{ github.repository }}"
-        OWNER=$(echo $REPO | cut -d'/' -f1)
-        BRANCH_NAME="${{ steps.create-branch.outputs.branch-name }}"
-        COMMENT_BODY="Branch [$BRANCH_NAME](https://github.com/$OWNER/$REPO/tree/$BRANCH_NAME) created 🚀"
-
-        curl -s -X POST \
-          -H "Authorization: token $GITHUB_TOKEN" \
-          -H "Content-Type: application/json" \
-          -d "{\"body\": \"$COMMENT_BODY\"}" \
-          https://api.github.com/repos/$REPO/issues/$ISSUE_NUMBER/comments
+        echo "🔍 Reading CloudFormation parameters from artifact file..."
+        
+        # Get the artifact path from input (with default)
+        ARTIFACT_PATH="${{ inputs.artifact-path }}"
+        echo "📂 Artifact path: $ARTIFACT_PATH"
+        
+        # Check if the artifact file exists
+        if [ ! -f "$ARTIFACT_PATH" ]; then
+          echo "❌ Error: Artifact file not found at path: $ARTIFACT_PATH"
+          echo "💡 Please ensure the deployment.json file exists at the specified path"
+          exit 1
+        fi
+        
+        echo "✅ Artifact file found, parsing JSON content..."
+        
+        # Extract parameters using jq (compact JSON format)
+        PARAMETERS=$(jq -c '.parameters // {}' "$ARTIFACT_PATH")
+        if [ $? -ne 0 ]; then
+          echo "❌ Error: Failed to parse parameters from JSON file"
+          exit 1
+        fi
+        
+        # Extract stack-name using jq
+        STACK_NAME=$(jq -r '.["stack-name"] // ""' "$ARTIFACT_PATH")
+        if [ $? -ne 0 ]; then
+          echo "❌ Error: Failed to parse stack-name from JSON file"
+          exit 1
+        fi
+        
+        # Extract template-path using jq
+        TEMPLATE_PATH=$(jq -r '.["template-path"] // ""' "$ARTIFACT_PATH")
+        if [ $? -ne 0 ]; then
+          echo "❌ Error: Failed to parse template-path from JSON file"
+          exit 1
+        fi
+        
+        # Log the extracted values for debugging
+        echo "📋 Extracted values:"
+        echo "  Parameters: $PARAMETERS"
+        echo "  Stack Name: $STACK_NAME"
+        echo "  Template Path: $TEMPLATE_PATH"
+        
+        # Set GitHub Actions outputs
+        echo "🔧 Setting GitHub Actions outputs..."
+        echo "parameters=$PARAMETERS" >> $GITHUB_OUTPUT
+        echo "stack-name=$STACK_NAME" >> $GITHUB_OUTPUT
+        echo "template-path=$TEMPLATE_PATH" >> $GITHUB_OUTPUT
+        
+        # Set environment variables
+        echo "🌍 Setting environment variables..."
+        
+        # Set DEPLOYMENT_PARAMETERS as multiline environment variable
+        echo "DEPLOYMENT_PARAMETERS<<EOF" >> $GITHUB_ENV
+        echo "$PARAMETERS" >> $GITHUB_ENV
+        echo "EOF" >> $GITHUB_ENV
+        
+        # Set DEPLOYMENT_STACK_NAME as single-line environment variable
+        echo "DEPLOYMENT_STACK_NAME=$STACK_NAME" >> $GITHUB_ENV
+        
+        # Set DEPLOYMENT_TEMPLATE_PATH as single-line environment variable
+        echo "DEPLOYMENT_TEMPLATE_PATH=$TEMPLATE_PATH" >> $GITHUB_ENV
+        
+        echo "✅ Successfully extracted CloudFormation parameters, set outputs, and configured environment variables"
