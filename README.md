@@ -134,7 +134,7 @@ jobs:
           aws-region: us-east-1
 
       - name: Extract CloudFormation Parameters
-        uses: subhamay-bhattacharyya-gha/cfn-read-deployment-params-action@v1
+        uses: subhamay-bhattacharyya-gha/cfn-read-deployment-params-action@main
         id: cfn-params
 
       - name: Deploy CloudFormation Stack
