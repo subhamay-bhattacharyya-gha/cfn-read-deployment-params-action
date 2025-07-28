@@ -1,7 +1,7 @@
 {
   "name": "cfn-read-deployment-params-action",
   "version": "0.0.0",
-  "description": "A sample project using semantic release with custom plugins.",
+  "description": "GitHub Action to read CloudFormation deployment parameters using semantic release with custom plugins.",
   "main": "index.js",
   "scripts": {
     "release": "semantic-release"
