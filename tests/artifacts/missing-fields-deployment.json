@@ -1,0 +1,6 @@
+{
+  "parameters": {
+    "EnvironmentName": "prod"
+  },
+  "stack-name": "production-stack"
+}
