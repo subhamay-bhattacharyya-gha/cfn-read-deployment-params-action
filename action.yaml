@@ -14,6 +14,8 @@ outputs:
     description: 'CloudFormation stack name'
   template-path:
     description: 'Path to CloudFormation template'
+  cloudformation-tags:
+    description: 'CloudFormation tags in JSON format'
 
 runs:
   using: 'composite'
@@ -57,17 +59,26 @@ runs:
           exit 1
         fi
         
+        # Extract tags using jq (compact JSON format)
+        TAGS=$(jq -c '.tags // {}' "$ARTIFACT_PATH")
+        if [ $? -ne 0 ]; then
+          echo "❌ Error: Failed to parse tags from JSON file"
+          exit 1
+        fi
+        
         # Log the extracted values for debugging
         echo "📋 Extracted values:"
         echo "  Parameters: $PARAMETERS"
         echo "  Stack Name: $STACK_NAME"
         echo "  Template Path: $TEMPLATE_PATH"
+        echo "  Tags: $TAGS"
         
         # Set GitHub Actions outputs
         echo "🔧 Setting GitHub Actions outputs..."
         echo "parameters=$PARAMETERS" >> $GITHUB_OUTPUT
         echo "stack-name=$STACK_NAME" >> $GITHUB_OUTPUT
         echo "template-path=$TEMPLATE_PATH" >> $GITHUB_OUTPUT
+        echo "cloudformation-tags=$TAGS" >> $GITHUB_OUTPUT
         
         # Set environment variables
         echo "🌍 Setting environment variables..."
@@ -82,5 +93,10 @@ runs:
         
         # Set DEPLOYMENT_TEMPLATE_PATH as single-line environment variable
         echo "DEPLOYMENT_TEMPLATE_PATH=$TEMPLATE_PATH" >> $GITHUB_ENV
+        
+        # Set DEPLOYMENT_TAGS as multiline environment variable
+        echo "DEPLOYMENT_TAGS<<EOF" >> $GITHUB_ENV
+        echo "$TAGS" >> $GITHUB_ENV
+        echo "EOF" >> $GITHUB_ENV
         
         echo "✅ Successfully extracted CloudFormation parameters, set outputs, and configured environment variables"
